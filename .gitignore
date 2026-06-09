@@ -1,0 +1,5 @@
+.DS_Store
+*.log
+node_modules/
+create-icons.js
+generate-icons.html
