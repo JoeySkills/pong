@@ -15,7 +15,7 @@ A modern, mobile-optimized Progressive Web App (PWA) implementation of the class
 
 ## Play Now
 
-**[Play Online](https://joeykills.github.io/pong/pong.html)**
+**[Play Online](https://joeykills.github.io/pong/)**
 
 Or install as an app on your iPhone:
 1. Open the link above in Safari
@@ -57,7 +57,7 @@ cd pong
 python3 -m http.server 8080
 
 # Open in browser
-open http://localhost:8080/pong.html
+open http://localhost:8080/index.html
 ```
 
 ## Tech Stack

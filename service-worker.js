@@ -1,6 +1,6 @@
 const CACHE_NAME = 'pong-v1';
 const urlsToCache = [
-  '/pong.html',
+  '/index.html',
   '/manifest.json'
 ];
 
