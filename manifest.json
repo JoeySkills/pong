@@ -2,7 +2,7 @@
   "name": "PONG - Two Player Classic",
   "short_name": "PONG",
   "description": "Classic two-player Pong game",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "fullscreen",
   "orientation": "portrait",
   "background_color": "#0a0a0f",
