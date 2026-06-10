@@ -6,8 +6,9 @@ A modern, mobile-optimized Progressive Web App (PWA) implementation of the class
 
 ## Features
 
-- 🎮 **Two-player gameplay** - Play with a friend on the same device
-- 📱 **Mobile-optimized** - Touch controls with split-screen for each player
+- 🤖 **Single-player mode** - Play against an AI opponent
+- 🎮 **Two-player mode** - Play with a friend on the same device
+- 📱 **Mobile-optimized** - Touch controls with split-screen for two players
 - 🖥️ **Desktop support** - Mouse and keyboard controls
 - 🌐 **Progressive Web App** - Install on your phone like a native app
 - 🔌 **Offline capable** - Play even without internet connection
@@ -24,15 +25,20 @@ Or install as an app on your iPhone:
 
 ## Controls
 
-### Mobile (Touch)
-- **Left half of screen** - Controls Player 1 (blue paddle)
-- **Right half of screen** - Controls Player 2 (pink paddle)
-- Drag your finger up/down to move your paddle
+### 1 Player Mode
+- **Mobile**: Drag on left side to control your paddle
+- **Desktop**: W/S keys or mouse movement (left side)
+- CPU automatically controls the right paddle
 
-### Desktop
-- **Player 1**: W/S keys or mouse (left side)
-- **Player 2**: Arrow Up/Down keys or mouse (right side)
-- **Spacebar** or **Click** - Start/continue game
+### 2 Player Mode
+- **Mobile (Touch)**
+  - Left half of screen - Player 1 (blue)
+  - Right half of screen - Player 2 (pink)
+- **Desktop**
+  - Player 1: W/S keys or mouse (left side)
+  - Player 2: Arrow Up/Down or mouse (right side)
+
+**Start**: Click/tap anywhere or press Spacebar
 
 ## Gameplay
 
