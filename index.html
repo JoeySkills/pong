@@ -51,6 +51,53 @@
     margin-top: 3px;
   }
 
+  #modeSelect {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 10;
+  }
+  .mode-btn {
+    display: block;
+    width: 200px;
+    margin: 12px auto;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #5ba3ff, #2060cc);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(91,163,255,0.3);
+    transition: all 0.2s;
+  }
+  .mode-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(91,163,255,0.5);
+  }
+  .mode-btn:active {
+    transform: translateY(0);
+  }
+  .mode-btn.vs-bot {
+    background: linear-gradient(135deg, #ff5a8a, #cc2050);
+    box-shadow: 0 4px 20px rgba(255,90,138,0.3);
+  }
+  .mode-btn.vs-bot:hover {
+    box-shadow: 0 6px 25px rgba(255,90,138,0.5);
+  }
+  .mode-title {
+    color: #fff;
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+    letter-spacing: 0.2em;
+  }
+
   .arena {
     position: relative;
     border: 2px solid #1e1e2e;
@@ -105,17 +152,22 @@
 
 <div id="header">
   <h1>PONG</h1>
-  <p class="subtitle">Two Player Classic</p>
+  <p class="subtitle" id="subtitle">Two Player Classic</p>
 </div>
 
 <div class="arena" id="arena">
   <canvas id="c"></canvas>
-  <div id="startMsg">TAP TO START</div>
+  <div id="modeSelect">
+    <div class="mode-title">SELECT MODE</div>
+    <button class="mode-btn" onclick="selectMode('1p')">1 PLAYER</button>
+    <button class="mode-btn vs-bot" onclick="selectMode('2p')">2 PLAYER</button>
+  </div>
+  <div id="startMsg" style="display:none;">TAP TO START</div>
 </div>
 
 <div class="touch-hints">
-  <div class="touch-hint p1">← Player 1 · drag left</div>
-  <div class="touch-hint p2">drag right · Player 2 →</div>
+  <div class="touch-hint p1" id="hint-p1">← Player 1 · drag left</div>
+  <div class="touch-hint p2" id="hint-p2">drag right · Player 2 →</div>
 </div>
 
 <script>
@@ -182,7 +234,8 @@ const W = () => canvas.width;
 const H = () => canvas.height;
 
 // ── State ────────────────────────────────────────────────────────────────────
-let state = 'idle';
+let gameMode = null; // '1p' or '2p'
+let state = 'mode-select';
 let scores = [0, 0];
 let ball, p1, p2;
 let keys = {};
@@ -191,6 +244,29 @@ let flashTimer = 0, flashSide = -1;
 
 // Touch tracking: map touchId → { player (0|1), lastY }
 let touches = {};
+
+// Bot AI
+let botReactionDelay = 0;
+
+function selectMode(mode) {
+  gameMode = mode;
+  document.getElementById('modeSelect').style.display = 'none';
+  document.getElementById('subtitle').textContent = mode === '1p' ? 'vs CPU' : 'Two Player Classic';
+
+  // Update hints
+  if (mode === '1p') {
+    document.getElementById('hint-p1').textContent = '← You · drag left';
+    document.getElementById('hint-p2').textContent = 'CPU →';
+  } else {
+    document.getElementById('hint-p1').textContent = '← Player 1 · drag left';
+    document.getElementById('hint-p2').textContent = 'drag right · Player 2 →';
+  }
+
+  state = 'idle';
+  startMsg.style.display = 'block';
+  startMsg.textContent = 'TAP TO START';
+  initRound();
+}
 
 function initRound(scorer) {
   const vx = scorer === undefined ? (Math.random() < .5 ? 1 : -1) : (scorer === 0 ? 1 : -1);
@@ -203,6 +279,7 @@ function initRound(scorer) {
   };
   p1 = { x: 18 * S, y: H()/2 };
   p2 = { x: W() - 18*S - PAD_W(), y: H()/2 };
+  botReactionDelay = 0;
 }
 
 // ── Particles ────────────────────────────────────────────────────────────────
@@ -309,7 +386,10 @@ function draw() {
     ctx.fillStyle = winner === 1 ? '#7ab4ff' : '#ff7a9c';
     ctx.font = `900 ${Math.floor(26*S)}px 'Courier New'`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(`PLAYER ${winner} WINS`, W()/2, H()/2 - 20*S);
+    const winText = gameMode === '1p'
+      ? (winner === 1 ? 'YOU WIN!' : 'CPU WINS!')
+      : `PLAYER ${winner} WINS`;
+    ctx.fillText(winText, W()/2, H()/2 - 20*S);
     ctx.fillStyle = '#555';
     ctx.font = `${Math.floor(10*S)}px 'Courier New'`;
     ctx.fillText('TAP TO PLAY AGAIN', W()/2, H()/2 + 18*S);
@@ -320,11 +400,27 @@ function draw() {
 function update() {
   if (state !== 'playing') return;
 
-  // Keyboard
+  // Player 1 controls (always human)
   if (keys['w']||keys['W']) p1.y -= PAD_SPEED();
   if (keys['s']||keys['S']) p1.y += PAD_SPEED();
-  if (keys['ArrowUp'])   p2.y -= PAD_SPEED();
-  if (keys['ArrowDown']) p2.y += PAD_SPEED();
+
+  // Player 2 controls (human in 2p mode, bot in 1p mode)
+  if (gameMode === '2p') {
+    if (keys['ArrowUp'])   p2.y -= PAD_SPEED();
+    if (keys['ArrowDown']) p2.y += PAD_SPEED();
+  } else if (gameMode === '1p') {
+    // Bot AI: track ball with some delay for realism
+    botReactionDelay++;
+    if (botReactionDelay > 3 && ball.vx > 0) { // Only react when ball is coming toward bot
+      const targetY = ball.y;
+      const diff = targetY - p2.y;
+      const moveSpeed = PAD_SPEED() * 0.85; // Slightly slower than player
+      if (Math.abs(diff) > 5) {
+        if (diff > 0) p2.y += moveSpeed;
+        else p2.y -= moveSpeed;
+      }
+    }
+  }
 
   const half = PAD_H()/2;
   p1.y = Math.max(half, Math.min(H()-half, p1.y));
@@ -384,8 +480,10 @@ function checkGameOver(scorer) {
 }
 
 function startGame() {
-  scores = [0,0]; initRound(); state = 'playing';
+  scores = [0,0]; initRound(); state = 'mode-select';
   startMsg.style.display = 'none';
+  document.getElementById('modeSelect').style.display = 'block';
+  gameMode = null;
 }
 
 // ── Input: Keyboard ───────────────────────────────────────────────────────────
@@ -412,12 +510,16 @@ canvas.addEventListener('touchstart', e => {
     const tx = t.clientX - rect.left;
     const ty = t.clientY - rect.top;
     const player = tx < W()/2 ? 0 : 1;
+
+    // In 1p mode, only allow left side (player) control
+    if (gameMode === '1p' && player === 1) continue;
+
     touches[t.identifier] = { player, lastY: ty };
 
     // Snap paddle to finger y on first touch
     const half = PAD_H()/2;
     if (player === 0) p1.y = Math.max(half, Math.min(H()-half, ty));
-    else              p2.y = Math.max(half, Math.min(H()-half, ty));
+    else if (gameMode === '2p') p2.y = Math.max(half, Math.min(H()-half, ty));
   }
   // Start / continue game on tap
   if (state === 'idle') { state = 'playing'; startMsg.style.display = 'none'; }
@@ -433,7 +535,7 @@ canvas.addEventListener('touchmove', e => {
     const ty = t.clientY - rect.top;
     const half = PAD_H()/2;
     if (info.player === 0) p1.y = Math.max(half, Math.min(H()-half, ty));
-    else                   p2.y = Math.max(half, Math.min(H()-half, ty));
+    else if (gameMode === '2p') p2.y = Math.max(half, Math.min(H()-half, ty));
     info.lastY = ty;
   }
 }, { passive: false });
@@ -460,7 +562,7 @@ canvas.addEventListener('mousemove', e => {
   const my = e.clientY - rect.top;
   const half = PAD_H()/2;
   if (mx < W()/2) p1.y = Math.max(half, Math.min(H()-half, my));
-  else            p2.y = Math.max(half, Math.min(H()-half, my));
+  else if (gameMode === '2p') p2.y = Math.max(half, Math.min(H()-half, my));
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
